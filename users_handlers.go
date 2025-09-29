@@ -64,3 +64,21 @@ func handlerReset(s *state, cmd command) error {
 
 	return nil
 }
+
+func handlerGetUsers(s *state, cmd command) error {
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	currentUser := s.config.CurrentUserName
+	for _, u := range users {
+		var post string
+		if currentUser == u.Name {
+			post = " (current)"
+		}
+		fmt.Printf("%v%v\n", u.Name, post)
+	}
+
+	return nil
+}
