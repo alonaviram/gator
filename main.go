@@ -1,13 +1,17 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
 	"github.com/alonaviram/gator/internal/config"
+	"github.com/alonaviram/gator/internal/database"
+	_ "github.com/lib/pq"
 )
 
 type state struct {
+	db     *database.Queries
 	config *config.Config
 }
 
@@ -38,7 +42,13 @@ func main() {
 		panic("wtf")
 	}
 
+	db, err := sql.Open("postgres", config.DBURL)
+	if err != nil {
+		panic(fmt.Sprintf("Couldn't connect to db url:%v", config.DBURL))
+	}
+	databaseQueries := database.New(db)
 	state := state{
+		db:     databaseQueries,
 		config: &config,
 	}
 
@@ -46,6 +56,8 @@ func main() {
 		cmds: createCommandsMap(),
 	}
 	commands.register("login", handlerLogin)
+
+	commands.register("register", handlerRegister)
 
 	args := os.Args
 
