@@ -1,0 +1,11 @@
+[sqlfluff]
+dialect = postgres
+templater = placeholder
+
+[sqlfluff:templater:placeholder]
+# Regex for things sqlfluff should treat as placeholders
+param_style = dollar
+
+[sqlfluff:rules]
+# Ignore unparsable sections (like RETURNING *)
+L013 = ignore
