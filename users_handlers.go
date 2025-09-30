@@ -16,7 +16,7 @@ func handlerLogin(s *state, cmd command) error {
 		return errors.New("need username as argument")
 	}
 	name := args[0]
-	_, e := s.db.GetUser(context.Background(), name)
+	_, e := s.db.GetUserByName(context.Background(), name)
 	if e != nil {
 		return e
 	}
@@ -33,7 +33,7 @@ func handlerRegister(s *state, cmd command) error {
 		return errors.New("need username as argument")
 	}
 	name := cmd.args[0]
-	_, err := s.db.GetUser(context.Background(), name)
+	_, err := s.db.GetUserByName(context.Background(), name)
 	if err == nil {
 		return errors.New("user already exists")
 	}
