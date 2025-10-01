@@ -65,17 +65,13 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
 		return errors.New("not enough parameters")
 	}
 
 	name := cmd.args[0]
 	url := cmd.args[1]
-	currentUser, e := s.db.GetUserByName(context.Background(), s.config.CurrentUserName)
-	if e != nil {
-		return e
-	}
 
 	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
 		ID:        uuid.New(),
@@ -83,13 +79,23 @@ func handlerAddFeed(s *state, cmd command) error {
 		UpdatedAt: time.Now(),
 		Name:      name,
 		Url:       url,
-		UserID:    currentUser.ID,
+		UserID:    user.ID,
 	})
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Created New Feed:\n%v\n", feed)
+	_, err = s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	})
+	if err != nil {
+		return err
+	}
 
+	fmt.Printf("Created New Feed:\n%v\n", feed)
 	return nil
 }
 
