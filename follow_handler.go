@@ -10,6 +10,27 @@ import (
 	"github.com/google/uuid"
 )
 
+func handlerUnFollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) != 1 {
+		return errors.New("expected url parameter")
+	}
+	url := cmd.args[0]
+
+	f, e := s.db.GetFeedByUrl(context.Background(), url)
+	if e != nil {
+		return e
+	}
+	_, e = s.db.DeleteFeedFollowForUserFeed(context.Background(), database.DeleteFeedFollowForUserFeedParams{
+		UserID: user.ID,
+		FeedID: f.ID,
+	})
+	if e != nil {
+		return e
+	}
+	fmt.Printf("deleted: feed %v, for user: %v", f.Url, user.Name)
+	return nil
+}
+
 func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
 		return errors.New("expected url parameter")
