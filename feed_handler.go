@@ -57,11 +57,35 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 }
 
 func handlerAgg(s *state, cmd command) error {
-	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	timeBetweenRequests, err := time.ParseDuration(cmd.args[0])
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%v", feed)
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		fmt.Println("tick")
+		scrapeFeeds(s)
+	}
+}
+
+func scrapeFeeds(s *state) error {
+	dbFeed, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Printf("fetching %v", dbFeed.Name)
+
+	feed, err := fetchFeed(context.Background(), dbFeed.Url)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.MarkFeedFetched(context.Background(), dbFeed.ID)
+	if err != nil {
+		return err
+	}
+	for _, rssItem := range feed.Channel.Item {
+		fmt.Printf("%v", rssItem.Title)
+	}
 	return nil
 }
 
