@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alonaviram/gator/internal/database"
@@ -73,7 +76,7 @@ func scrapeFeeds(s *state) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("fetching %v", dbFeed.Name)
+	fmt.Printf("fetching %v\n", dbFeed.Name)
 
 	feed, err := fetchFeed(context.Background(), dbFeed.Url)
 	if err != nil {
@@ -84,7 +87,31 @@ func scrapeFeeds(s *state) error {
 		return err
 	}
 	for _, rssItem := range feed.Channel.Item {
-		fmt.Printf("%v", rssItem.Title)
+
+		t, err := time.Parse(time.RFC1123Z, rssItem.PubDate)
+		if err != nil {
+			println("there was an error parsing date")
+			t = time.Now()
+		}
+		_, err = s.db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Title:     rssItem.Title,
+			Url:       rssItem.Link,
+			Description: sql.NullString{
+				String: rssItem.Description,
+				Valid:  rssItem.Description != "",
+			},
+			PublishedAt: t,
+			FeedID:      dbFeed.ID,
+		})
+		if err != nil {
+			isDup := strings.Contains(err.Error(), "posts_url_key")
+			if !isDup {
+				fmt.Printf("%v", err.Error())
+			}
+		}
 	}
 	return nil
 }
@@ -139,4 +166,47 @@ func handlerShowFeed(s *state, cmd command) error {
 	}
 
 	return nil
+}
+
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	var limit int32
+
+	if len(cmd.args) < 1 {
+		limit = 10
+	} else {
+		limitArg := cmd.args[0]
+		limitInt, err := strconv.Atoi(limitArg)
+		if err != nil {
+			return fmt.Errorf("limit arg must be of type int, got:%v", limitArg)
+		}
+
+		limit = int32(limitInt)
+	}
+	posts, error := s.db.GetPostsForUser(context.Background(), database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  limit,
+	})
+	if error != nil {
+		return error
+	}
+	fmt.Printf("Found %d posts for user %s:\n", len(posts), user.Name)
+	for _, post := range posts {
+		fmt.Printf("%s from %s\n", post.PublishedAt.Format("Mon Jan 2"), post.FeedName)
+		fmt.Printf("--- %s ---\n", post.Title)
+		fmt.Printf("    %v\n", post.Description.String)
+		fmt.Printf("Link: %s\n", post.Url)
+		fmt.Println("=====================================")
+	}
+	// fmt.
+	return nil
+
+	// timeBetweenRequests, err := time.ParseDuration(cmd.args[0])
+	// if err != nil {
+	// 	return err
+	// }
+	// ticker := time.NewTicker(timeBetweenRequests)
+	// for ; ; <-ticker.C {
+	// 	fmt.Println("tick")
+	// 	scrapeFeeds(s)
+	// }
 }

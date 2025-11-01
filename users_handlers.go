@@ -50,8 +50,11 @@ func handlerRegister(s *state, cmd command) error {
 	if e != nil {
 		return e
 	}
-	s.config.SetUser(u.Name)
-	fmt.Printf("created user: %v", u)
+	err = s.config.SetUser(u.Name)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("created user: %v\n", u.Name)
 
 	return nil
 }

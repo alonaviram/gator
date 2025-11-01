@@ -1,11 +1,16 @@
 [sqlfluff]
+# 1. Set the dialect for Postgres syntax (like RETURNING)
 dialect = postgres
+
+# 2. Set the templater to 'placeholder'
+# This is the correct one for $1, $2, etc.
 templater = placeholder
 
-[sqlfluff:templater:placeholder]
-# Regex for things sqlfluff should treat as placeholders
-param_style = dollar
+# 3. Ignore parsing errors.
+# This is often necessary for the non-SQL comments
+# that sqlc uses, like '-- name: CreatePost :one'
+ignore = parsing
 
-[sqlfluff:rules]
-# Ignore unparsable sections (like RETURNING *)
-L013 = ignore
+[sqlfluff:templater:placeholder]
+# 4. Tell the placeholder templater to use '$' style parameters
+param_style = dollar
